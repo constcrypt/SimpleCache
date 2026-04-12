@@ -1,0 +1,29 @@
+{
+	"name": "@rbxts/simple-cache",
+	"version": "1.0.0",
+	"description": "A lightweight Instance cache for roblox-ts that helps you track, retrieve, and safely clean up Instances using flexible lookup by instance, name, or id.",
+	"main": "out/init.lua",
+	"scripts": {
+		"build": "rbxtsc",
+		"watch": "rbxtsc -w",
+		"clean": "rimraf out"
+	},
+	"keywords": [
+		"roblox",
+		"roblox-ts",
+		"rbxts"
+	],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"files": [
+		"out",
+		"!**/*.ts"
+	],
+	"devDependencies": {
+		"@rbxts/compiler-types": "^3.0.0-types.0",
+		"@rbxts/types": "^1.0.915",
+		"roblox-ts": "^3.0.0",
+		"typescript": "^6.0.2"
+	}
+}

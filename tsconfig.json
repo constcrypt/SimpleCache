@@ -1,0 +1,24 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "CommonJS",
+		"moduleDetection": "force",
+		"moduleResolution": "Node",
+
+		"rootDir": "src",
+		"outDir": "out",
+
+		"strict": true,
+		"noLib": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"declaration": true,
+		"forceConsistentCasingInFileNames": true,
+
+		"typeRoots": ["node_modules/@rbxts"],
+		"types": ["types", "compiler-types"],
+	},
+	"include": ["src"],
+	"exclude": ["node_modules", "out"]
+}
