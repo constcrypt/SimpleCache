@@ -1,7 +1,7 @@
 {
   "name": "@rbxts/simple-cache",
   "version": "1.0.0",
-  "description": "A lightweight cache for tracking and cleaning up Instances also used for pooling.",
+  "description": "Simple LRU (Least Recently Used) cache with optional TTL (Time To Live) support.",
   "main": "out/init.lua",
   "scripts": {
     "build": "rbxtsc",

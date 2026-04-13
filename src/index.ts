@@ -9,7 +9,6 @@ interface SimpleCacheConfig {
 
 /**
  * Simple LRU (Least Recently Used) cache with optional TTL (Time To Live) support.
- * Good for caching data in Roblox games to avoid repeating work.
  */
 export default class SimpleCache<T = unknown> {
 	private store: Map<string, { value: T; expiresAt: number | undefined }>;
