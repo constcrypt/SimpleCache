@@ -1,193 +1,277 @@
 import CacheLogger from "./logger";
+import { ReplicatedStorage, Workspace, RunService } from "@rbxts/services";
 
 interface CacheInstance {
-  instance: Instance;
-  parent?: Instance;
-  id?: string;
+	instance: Instance;
+	available: boolean;
+	parent?: Instance;
+	id?: string;
+}
+
+export interface SimpleCacheConfig {
+	releaseContainer?: Instance;
+	batchSize?: number;
+	debug?: boolean;
 }
 
 /**
- * A lightweight cache for tracking and cleaning up Instances.
- * Works similarly to Trove, but only handles Instances.
+ * A lightweight cache for tracking and cleaning up Instances
+ * also used for pooling.
  *
  * @example
  * const cache = new SimpleCache();
  */
 export class SimpleCache {
-  private objects = new Array<CacheInstance>();
-  private cleaning = false;
-  private debugging = false;
+	private objects = new Array<CacheInstance>();
+	private cleaning = false;
 
-  /**
-   * Internal helper used to find a cached entry.
-   *
-   * @param identifier Instance, name, or id used to find the object
-   * @returns The matching cache entry if found
-   *
-   * @example
-   * cache.get("myPart")
-   */
-  private resolve(identifier: Instance | string): CacheInstance | undefined {
-    for (const obj of this.objects) {
-      if (typeOf(identifier) === "Instance" && obj.instance === identifier) {
-        return obj;
-      }
+	private releaseContainer: Instance;
 
-      if (typeOf(identifier) === "string" && obj.id === identifier) {
-        return obj;
-      }
+	private activationQueue = new Array<Instance | string>();
+	private running = false;
 
-      if (typeOf(identifier) === "string" && obj.instance.Name === identifier) {
-        return obj;
-      }
-    }
+	private batchSize: number;
+	private debugging: boolean;
 
-    return undefined;
-  }
+	/**
+	 * Creates a new SimpleCache instance.
+	 *
+	 * @param config Optional configuration for cache behavior
+	 *
+	 * @example
+	 * const cache = new SimpleCache({ batchSize: 200, debug: true });
+	 */
+	constructor(config?: SimpleCacheConfig) {
+		this.batchSize = config?.batchSize ?? 100;
+		this.debugging = config?.debug ?? false;
 
-  /**
-   * Adds an instance to the cache.
-   *
-   * @param instance The instance to store
-   * @param parent Optional parent to assign immediately
-   * @param id Optional id for easier lookup later
-   * @returns The same instance that was added
-   *
-   * @example
-   * const part = cache.add(new Instance("Part"), workspace, "mainPart");
-   */
-  public add<T extends Instance>(
-    instance: T,
-    parent?: Instance,
-    id?: string,
-  ): T {
-    if (this.cleaning) CacheLogger.warn("Tried adding while cache is cleaning.");
+		const folder = config?.releaseContainer;
 
-    if (parent) {
-      instance.Parent = parent;
-    }
+		if (folder) {
+			this.releaseContainer = folder as Instance;
+		} else {
+			let existing = ReplicatedStorage.FindFirstChild("SimpleCache") as Folder;
 
-    this.objects.push({
-      instance,
-      parent,
-      id,
-    });
+			if (!existing) {
+				existing = new Instance("Folder");
+				existing.Name = "SimpleCache";
+				existing.Parent = ReplicatedStorage;
+			}
 
-    if (this.debugging) CacheLogger.info(`Added "${instance.Name}" to cache.`);
+			this.releaseContainer = existing;
+		}
 
-    return instance;
-  }
+		RunService.Heartbeat.Connect((dt) => {
+			this.processQueue(dt);
+		});
+	}
 
-  /**
-   * Removes an instance from the cache and destroys it.
-   *
-   * @param identifier Instance, name, or id
-   * @returns True if something was removed, false if nothing matched
-   *
-   * @example
-   * cache.remove("mainPart");
-   */
-  public remove(identifier: Instance | string): boolean {
-    const index = this.objects.findIndex((obj) => {
-      if (typeOf(identifier) === "Instance") {
-        return obj.instance === identifier;
-      }
+	private resolve(identifier: Instance | string): CacheInstance | undefined {
+		for (const obj of this.objects) {
+			if (typeOf(identifier) === "Instance" && obj.instance === identifier) {
+				return obj;
+			}
 
-      return obj.id === identifier || obj.instance.Name === identifier;
-    });
+			if (typeOf(identifier) === "string") {
+				if (obj.id === identifier || obj.instance.Name === identifier) {
+					return obj;
+				}
+			}
+		}
 
-    if (index === -1) {
-      CacheLogger.warn(`Remove failed: "${tostring(identifier)}" not found.`);
-      return false;
-    }
+		return undefined;
+	}
 
-    const entry = this.objects[index];
-    this.objects.remove(index);
+	/**
+	 * Adds an instance to the cache.
+	 *
+	 * @param instance Instance to cache
+	 * @param parent Optional initial parent
+	 * @param id Optional identifier for fast lookup
+	 * @returns The same instance that was cached
+	 *
+	 * @example
+	 * cache.add(new Instance("Part"), workspace, "id_1");
+	 */
+	public add<T extends Instance>(instance: T, parent?: Instance, id?: string): T {
+		if (this.cleaning) CacheLogger.warn("Tried adding while cache is cleaning.");
 
-    entry.instance.Destroy();
+		if (parent) {
+			instance.Parent = parent;
+		}
 
-    if (this.debugging) CacheLogger.info(`Removed "${entry.instance.Name}" from cache.`);
+		this.objects.push({
+			instance,
+			available: true,
+			parent,
+			id,
+		});
 
-    return true;
-  }
+		if (this.debugging) {
+			CacheLogger.info(`Added "${instance.Name}" to cache.`);
+		}
 
-  /**
-   * Checks if something exists in the cache.
-   *
-   * @param identifier Instance, name, or id
-   * @returns True if found, otherwise false
-   *
-   * @example
-   * cache.has("mainPart");
-   */
-  public has(identifier: Instance | string): boolean {
-    return this.resolve(identifier) !== undefined;
-  }
+		return instance;
+	}
 
-  /**
-   * Gets an instance from the cache.
-   *
-   * @param identifier Instance, name, or id
-   * @returns The instance if found
-   *
-   * @example
-   * const part = cache.get("mainPart");
-   */
-  public get(identifier: Instance | string): Instance | undefined {
-    return this.resolve(identifier)?.instance;
-  }
+	/**
+	 * Gets an instance without changing its state.
+	 *
+	 * @param identifier Instance, name, or id
+	 * @returns Cached instance or undefined
+	 *
+	 * @example
+	 * cache.get("id_1");
+	 */
+	public get(identifier: Instance | string): Instance | undefined {
+		const obj = this.resolve(identifier);
+		if (!obj || !obj.available) return undefined;
 
-  /**
-   * Clears the cache without destroying instances.
-   *
-   * @example
-   * cache.clean();
-   */
-  public clean() {
-    if (this.cleaning) {
-      CacheLogger.warn("Tried cleaning while already cleaning.");
-      return;
-    }
+		return obj.instance;
+	}
 
-    this.cleaning = true;
+	/**
+	 * Activates an instance and moves it into the world.
+	 *
+	 * @param identifier Instance, name, or id
+	 * @param parent Optional parent (defaults to Workspace)
+	 * @returns Activated instance or undefined
+	 *
+	 * @example
+	 * cache.use("id_1");
+	 * cache.use("id_2", someFolder);
+	 */
+	public use(identifier: Instance | string, parent?: Instance): Instance | undefined {
+		const obj = this.resolve(identifier);
+		if (!obj || !obj.available) return undefined;
 
-    if (this.debugging) CacheLogger.info(`Cleaning cache (${this.objects.size()} items)`);
+		obj.available = false;
 
-    this.objects.clear();
+		const targetParent = parent ?? Workspace;
+		obj.instance.Parent = targetParent;
 
-    this.cleaning = false;
-  }
+		if (this.debugging) {
+			CacheLogger.info(`Using "${obj.instance.Name}"`);
+		}
 
-  /**
-   * Destroys everything in the cache and clears it.
-   *
-   * @example
-   * cache.destroy();
-   */
-  public destroy() {
-    if (this.cleaning) {
-      CacheLogger.warn("Tried destroying while already cleaning.");
-      return;
-    }
+		return obj.instance;
+	}
 
-    this.cleaning = true;
+	/**
+	 * Queues multiple instances for batch activation.
+	 *
+	 * @param identifiers List of instance ids or instances
+	 *
+	 * @example
+	 * cache.useMany(["id_1", "id_2"]);
+	 */
+	public useMany(identifiers: Array<Instance | string>) {
+		for (const id of identifiers) {
+			this.activationQueue.push(id);
+		}
+	}
 
-    if (this.debugging) CacheLogger.info(`Destroying cache (${this.objects.size()} items)`);
+	private processQueue(dt: number) {
+		if (this.activationQueue.size() === 0) return;
 
-    for (const obj of this.objects) {
-      if (obj.instance.Parent) {
-        obj.instance.Destroy();
-      }
-    }
+		if (dt > 0.03) {
+			this.batchSize = math.max(50, this.batchSize - 25);
+		} else if (dt < 0.015) {
+			this.batchSize = math.min(1000, this.batchSize + 25);
+		}
 
-    this.objects.clear();
+		const count = math.min(this.batchSize, this.activationQueue.size());
 
-    if (this.debugging) CacheLogger.info("Cache destroyed.");
+		for (let i = 0; i < count; i++) {
+			const id = this.activationQueue.shift();
+			if (!id) continue;
 
-    this.cleaning = false;
-  }
+			this.use(id);
+		}
+	}
 
-  public setDebugMode(enabled: boolean) {
-    this.debugging = enabled
-  }
+	/**
+	 * Releases an instance back into the pool.
+	 *
+	 * @param identifier Instance, name, or id
+	 * @returns True if successfully released
+	 *
+	 * @example
+	 * cache.release("id_1");
+	 */
+	public release(identifier: Instance | string): boolean {
+		const obj = this.resolve(identifier);
+
+		if (!obj || obj.available) return false;
+
+		obj.available = true;
+		obj.instance.Parent = this.releaseContainer;
+
+		if (this.debugging) {
+			CacheLogger.info(`Released "${obj.instance.Name}"`);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks if an instance is currently in use.
+	 *
+	 * @param identifier Instance, name, or id
+	 * @returns True if in use
+	 */
+	public isInUse(identifier: Instance | string): boolean {
+		const obj = this.resolve(identifier);
+		return obj !== undefined && !obj.available;
+	}
+
+	/**
+	 * Clears the cache without destroying instances.
+	 *
+	 * @example
+	 * cache.clean();
+	 */
+	public clean() {
+		if (this.cleaning) {
+			CacheLogger.warn("Tried cleaning while already cleaning.");
+			return;
+		}
+
+		this.cleaning = true;
+
+		this.objects.clear();
+
+		if (this.debugging) {
+			CacheLogger.info("Cache cleaned.");
+		}
+
+		this.cleaning = false;
+	}
+
+	/**
+	 * Destroys all cached instances and clears the cache.
+	 *
+	 * @example
+	 * cache.destroy();
+	 */
+	public destroy() {
+		if (this.cleaning) {
+			CacheLogger.warn("Tried destroying while already cleaning.");
+			return;
+		}
+
+		this.cleaning = true;
+
+		for (const obj of this.objects) {
+			obj.instance.Destroy();
+		}
+
+		this.objects.clear();
+
+		if (this.debugging) {
+			CacheLogger.info("Cache destroyed.");
+		}
+
+		this.cleaning = false;
+	}
 }

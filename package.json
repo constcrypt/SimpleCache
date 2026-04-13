@@ -1,29 +1,47 @@
 {
-	"name": "@rbxts/simple-cache",
-	"version": "1.0.0",
-	"description": "A lightweight Instance cache for roblox-ts that helps you track, retrieve, and safely clean up Instances using flexible lookup by instance, name, or id.",
-	"main": "out/init.lua",
-	"scripts": {
-		"build": "rbxtsc",
-		"watch": "rbxtsc -w",
-		"clean": "rimraf out"
-	},
-	"keywords": [
-		"roblox",
-		"roblox-ts",
-		"rbxts"
-	],
-	"author": "",
-	"license": "ISC",
-	"type": "commonjs",
-	"files": [
-		"out",
-		"!**/*.ts"
-	],
-	"devDependencies": {
-		"@rbxts/compiler-types": "^3.0.0-types.0",
-		"@rbxts/types": "^1.0.915",
-		"roblox-ts": "^3.0.0",
-		"typescript": "^6.0.2"
-	}
+  "name": "@rbxts/simple-cache",
+  "version": "1.0.0",
+  "description": "A lightweight cache for tracking and cleaning up Instances also used for pooling.",
+  "main": "out/init.lua",
+  "scripts": {
+    "build": "rbxtsc",
+    "watch": "rbxtsc -w",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/constcrypt/SimpleCache.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/constcrypt/SimpleCache/issues"
+  },
+  "homepage": "https://github.com/constcrypt/SimpleCache#readme",
+  "types": "out/index.d.ts",
+  "files": [
+    "out",
+    "!**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@rbxts/compiler-types": "^3.0.0-types.0",
+    "@rbxts/types": "^1.0.915",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/parser": "^8.58.1",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-roblox-ts": "^1.4.0",
+    "prettier": "^3.8.2",
+    "roblox-ts": "^3.0.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@rbxts/services": "^1.6.0"
+  }
 }
