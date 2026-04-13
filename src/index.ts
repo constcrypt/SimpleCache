@@ -148,8 +148,8 @@ export default class SimpleCache<T = unknown> {
 
 		return {
 			totalOps: iterations,
-			durationMs: duration,
-			opsPerSecond: math.round((iterations / duration) * 1000),
+			durationMs: duration * 1000,
+			opsPerSecond: math.round((iterations / duration)),
 			hits,
 			misses,
 		};
