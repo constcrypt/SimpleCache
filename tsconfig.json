@@ -24,6 +24,9 @@
 		"tsBuildInfoFile": "out/tsconfig.tsbuildinfo",
 		"declaration": true
 	},
+	"rbxts": {
+		"type": "package"
+	},
 	"include": ["src/**/*.ts", "src/**/*.tsx"],
 	"exclude": ["out", "node_modules"]
 }
