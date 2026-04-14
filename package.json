@@ -1,7 +1,7 @@
 {
-  "name": "@rbxts/simple-cache",
+  "name": "@constcrypt/simple-cache",
   "version": "1.0.0",
-  "description": "A lightweight Instance cache for roblox-ts that helps you track, retrieve, and safely clean up Instances using flexible lookup by instance, name, or id.",
+  "description": "SimpleCache is a small in-memory cache for roblox-ts",
   "main": "out/init.luau",
   "typings": "index.d.ts",
   "scripts": {
