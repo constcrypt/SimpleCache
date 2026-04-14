@@ -2,7 +2,10 @@ function log(msg: string) {
 	return warn(`[SIMPLE-CACHE | DEBUG] - ${msg}`)
 }
 
-interface SimpleCacheConfig {
+/**
+ * Simple Cache Configurations.
+ */
+export interface SimpleCacheConfig {
 	maxSize?: number;
 	debug?: boolean;
 }

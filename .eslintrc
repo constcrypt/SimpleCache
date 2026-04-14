@@ -3,7 +3,7 @@
 	"parserOptions": {
 		"jsx": true,
 		"useJSXTextNode": true,
-		"ecmaVersion": 2018,
+		"ecmaVersion": 2026,
 		"sourceType": "module",
 		"project": "./tsconfig.json"
 	},

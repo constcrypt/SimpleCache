@@ -1,123 +1,185 @@
 # SimpleCache
 
-SimpleCache is a lightweight in-memory caching system for Roblox.
+SimpleCache is a small in-memory cache for `roblox-ts` with:
 
-It helps you store values so you don’t have to recompute or refetch them over and over. It uses:
+- **LRU eviction** (Least Recently Used): when the cache is full, the least recently accessed item is removed
+- **optional TTL** (Time To Live): items can expire automatically after `n` seconds
 
-- LRU (Least Recently Used) eviction to control memory usage
-- optional TTL (Time To Live) expiration to auto-remove old data
+Use it to avoid repeating expensive work (computations, HTTP calls, DataStore reads, etc.).
 
-This makes it great for performance-heavy Roblox games where repeated work is expensive.
+## Install
 
----
-
-## What it does
-
-- Stores values in memory
-- Quickly retrieves them by key
-- Automatically removes old items when full (LRU system)
-- Optionally expires data after a set time (TTL system)
-- Keeps memory usage under control
-
----
-
-## Configuration
-
-### SimpleCacheConfig
-
-```ts
-interface SimpleCacheConfig {
-	maxSize?: number;
-	debug?: boolean;
-}
+```bash
+npm i @rbxts/simple-cache
 ```
 
----
-
-## Usage
-
-### Creating a cache
-
+## Configs
 ```ts
-const cache = new SimpleCache({
-	maxSize: 500, // default 1000
-	debug: true // default false
+interface SimpleCacheConfig {
+	maxSize?: number; // default 1000
+	debug?: boolean; // default false
+}
+```
+- `maxSize`: maximum number of entries before LRU eviction kicks in
+- `debug`: when `true`, logs cache actions using `warn()`
+
+## Configs usage
+```ts
+new SimpleCache({
+	maxSize?: number;
+	debug?: boolean;
 })
 ```
 
----
+## Basic usage
+
+```ts
+import SimpleCache from "@rbxts/simple-cache";
+
+const cache = new SimpleCache({ maxSize: 500, debug: false });
+
+cache.set("score:blue", 1);
+cache.set("score:red", 2);
+print(`Blue: ${cache.get("score:blue")} - Red: ${cache.get("score:red")}`); // Blue: 1 - Red: 2
+```
+
+### TTL (Time To Live)
+
+TTL is in **seconds**. When a value is expired, `get` returns `undefined` (and `has` becomes `false`).
+
+```ts
+DashActivated.Connect((p: Player) => {
+	cache.set(`cooldown:Dash_${p.Name}`, true, 3); // expires after 3 seconds
+	print(cache.get(`cooldown:Dash_${p.Name}`)) // true
+
+	task.wait(3)
+
+	print(cache.get(`cooldown:Dash_${p.Name}`)) // undefined
+})
+```
+
+### remember (cache async work)
+
+`remember` runs an async function once and caches its result. If the value is already cached (and not expired),
+it returns the cached value and does **not** run the function again.
+
+```ts
+type Profile = { level: number };
+
+const profiles = new SimpleCache<Profile>({ maxSize: 200 });
+
+const profile = await profiles.remember(
+	"profile:123",
+	async () => {
+		// ...
+		return { level: 7 };
+	},
+	60, // keep for 60 seconds
+);
+```
 
 ## API
 
+```ts
+new SimpleCache<T>(config?: { maxSize?: number; debug?: boolean })
+
+set(key: string, value: T, ttl?: number): void
+
+get(key: string): T | undefined
+
+has(key: string): boolean
+
+delete(key: string): boolean
+
+clear(): void
+
+size(): number
+
+remember<R>(key: string, fn: () => Promise<R>, ttl?: number): Promise<R>
+
+benchmark(iterations?: number): {
+	totalOps: number;
+	durationMs: number;
+	opsPerSecond: number;
+	hits: number;
+	misses: number;
+}
+```
+
 ### set
+
+Stores a value under a key.
 
 ```ts
 set(key: string, value: T, ttl?: number): void
 ```
 
-##### Stores a value in cache.
-- ``ttl`` = Time To Live (in seconds)
-- If TTL is set, the value expires after that set amount of time
+- If `key` already exists, its value is replaced and it becomes “most recently used”.
+- `ttl` is optional and measured in **seconds**. When provided and `> 0`, the entry expires after `ttl` seconds.
 
 ### get
+
+Retrieves a value by key.
 
 ```ts
 get(key: string): T | undefined
 ```
 
-##### Gets a value from that cache.
-- Returns ``undefined`` if **missing** or **expired**
-- Marks the item as **recently** used (LRU update)
+- Returns `undefined` if the key is missing or the entry is expired.
+- Updates recency (LRU): a successful `get` marks the entry as “most recently used”.
 
 ### has
+
+Checks whether a valid (non-expired) value exists for the key.
 
 ```ts
 has(key: string): boolean
 ```
-##### Checks if a **valid (non-expired)** value exists.
-- Returns true if that value exists else false
+
+- Returns `true` only when `get(key)` would return a value.
+- Note: this method calls `get` internally, so it also updates recency (LRU) when the key exists.
 
 ### delete
+
+Removes a key from the cache.
 
 ```ts
 delete(key: string): boolean
 ```
 
-##### Removes a value from the cache.
-- Returns true if success else false
+- Returns `true` if an entry was removed.
 
 ### clear
+
+Removes all entries.
 
 ```ts
 clear(): void
 ```
 
-Removes **everything** from the cache.
-
 ### size
+
+Returns the current number of stored entries.
 
 ```ts
 size(): number
 ```
 
-Returns how many items are **currently** stored.
-
 ### remember
+
+Caches the result of an async function.
 
 ```ts
 remember<R>(key: string, fn: () => Promise<R>, ttl?: number): Promise<R>
 ```
 
-Runs a function and caches its result.
-
-If the value already exists, it won't run the function again.
-
-##### Examples of what it could be useful for:
-- HTTP requests
-- DataStore reads
-- Heavy calculations
+- If `key` is cached (and not expired), returns the cached value immediately.
+- Otherwise runs `fn()`, stores its result, then returns it.
+- `ttl` is optional (seconds), same as `set`.
 
 ### benchmark
+
+Runs a simple hit/miss benchmark against the cache (useful for quick sanity/perf checks).
 
 ```ts
 benchmark(iterations?: number): {
@@ -129,77 +191,5 @@ benchmark(iterations?: number): {
 }
 ```
 
-Runs a simple performance test on the cache.
-
-##### It simulates:
-- Cache hits
-- Cache misses
-- Mixed read/write usage
-
----
-
-## How it works
-
-### LRU (Least Recently Used)
-
-##### When the cache is full:
-> The item that hasn't been used for the longest time gets removed
-
-This keeps frequently used data in memory.
-
-### TTL (Time To Live)
-
-If you set a TTL:
-
-```ts
-cache.set("key", value, 10)
-```
-
-That value will **automatically** expire after 10 seconds.
-
----
-
-## Examples
-
-### Discord fetch user
-
-Avoids re-fetching the same user data from Discord API.
-
-```ts
-const cache = new SimpleCache();
-
-async function getDiscordUser(userId: string) {
-	return cache.remember(`discord_user_${userId}`, async () => {
-		const res = await fetch(`https://discord.com/api/users/${userId}`);
-		return res.json();
-	}, 60);
-}
-
-```
-
-### Combat cooldown caching
-
-Simple cooldown system for abilities.
-
-```ts
-const cooldowns = new SimpleCache();
-
-function useAbility(playerId: string) {
-	const key = `cooldown_${playerId}`;
-
-	if (cooldowns.has(key)) return false;
-
-	cooldowns.set(key, true, 3);
-
-	print("Ability used!");
-	return true;
-}
-```
-
----
-
-## When to not use it
-
-##### Don't use it for (examples):
-- Permanent storage
-- long-term persistence#
+- `iterations` defaults to `100000`.
+- Returns totals plus hit/miss counts and approximate throughput.
