@@ -10,7 +10,7 @@ Use it to avoid repeating expensive work (computations, HTTP calls, DataStore re
 ## Install
 
 ```bash
-npm i @constcrypt/simple-cache
+npm i simple-cache
 ```
 
 ## Configs
