@@ -1,5 +1,5 @@
 {
-  "name": "@constcrypt/simple-cache",
+  "name": "simple-cache",
   "version": "1.0.1",
   "description": "SimpleCache is a small in-memory cache for roblox-ts",
   "main": "out/init.luau",
