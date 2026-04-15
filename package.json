@@ -1,6 +1,6 @@
 {
   "name": "simple-cache",
-  "version": "1.0.2",
+  "version": "1.0.3-beta.0",
   "description": "SimpleCache is a small in-memory cache for roblox-ts",
   "main": "out/init.luau",
   "typings": "index.d.ts",
