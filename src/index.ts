@@ -5,7 +5,7 @@ function log(msg: string) {
 /**
  * Simple Cache Configurations.
  */
-export interface SimpleCacheConfig {
+export interface RobloxCacheConfig {
 	maxSize?: number;
 	debug?: boolean;
 }
@@ -13,7 +13,7 @@ export interface SimpleCacheConfig {
 /**
  * Simple LRU (Least Recently Used) cache with optional TTL (Time To Live) support.
  */
-export default class SimpleCache<T = unknown> {
+export default class RobloxCache<T = unknown> {
 	private store: Map<string, { value: T; expiresAt: number | undefined }>;
 	private order: string[];
 	private maxSize: number;
@@ -23,7 +23,7 @@ export default class SimpleCache<T = unknown> {
 	 * @description Create a new cache.
 	 * @param maxSize max number of items before old ones get removed
 	 */
-	constructor(config: SimpleCacheConfig = {}) {
+	constructor(config: RobloxCacheConfig = {}) {
 		this.store = new Map();
 		this.order = [];
 		this.maxSize = config.maxSize ?? 1000;

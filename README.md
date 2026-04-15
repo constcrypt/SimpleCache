@@ -1,6 +1,6 @@
-# SimpleCache
+# RobloxCache
 
-SimpleCache is a small in-memory cache for `roblox-ts` with:
+A small in-memory cache for `roblox-ts` with:
 
 - **LRU eviction** (Least Recently Used): when the cache is full, the least recently accessed item is removed
 - **optional TTL** (Time To Live): items can expire automatically after `n` seconds
@@ -10,12 +10,12 @@ Use it to avoid repeating expensive work (computations, HTTP calls, DataStore re
 ## Install
 
 ```bash
-npm i simple-cache
+npm i roblox-cache
 ```
 
 ## Configs
 ```ts
-interface SimpleCacheConfig {
+interface RobloxCacheConfig {
 	maxSize?: number; // default 1000
 	debug?: boolean; // default false
 }
@@ -25,7 +25,7 @@ interface SimpleCacheConfig {
 
 ## Configs usage
 ```ts
-new SimpleCache({
+new RobloxCache({
 	maxSize?: number;
 	debug?: boolean;
 })
@@ -34,9 +34,9 @@ new SimpleCache({
 ## Basic usage
 
 ```ts
-import SimpleCache from "simple-cache";
+import RobloxCache from "roblox-cache";
 
-const cache = new SimpleCache({ maxSize: 500, debug: false });
+const cache = new RobloxCache({ maxSize: 500, debug: false });
 
 cache.set("score:blue", 1);
 cache.set("score:red", 2);
@@ -66,7 +66,7 @@ it returns the cached value and does **not** run the function again.
 ```ts
 type Profile = { level: number };
 
-const profiles = new SimpleCache<Profile>({ maxSize: 200 });
+const profiles = new RobloxCache<Profile>({ maxSize: 200 });
 
 const profile = await profiles.remember(
 	"profile:123",
@@ -81,7 +81,7 @@ const profile = await profiles.remember(
 ## API
 
 ```ts
-new SimpleCache<T>(config?: { maxSize?: number; debug?: boolean })
+new RobloxCache<T>(config?: { maxSize?: number; debug?: boolean })
 
 set(key: string, value: T, ttl?: number): void
 
