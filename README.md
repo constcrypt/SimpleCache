@@ -1,4 +1,4 @@
-# RobloxCache
+# SimpleCache
 
 A small in-memory cache for `roblox-ts` with:
 
@@ -10,12 +10,12 @@ Use it to avoid repeating expensive work (computations, HTTP calls, DataStore re
 ## Install
 
 ```bash
-npm i roblox-cache
+npm i @rbxts/simple-cache
 ```
 
 ## Configs
 ```ts
-interface RobloxCacheConfig {
+interface SimpleCacheConfig {
 	maxSize?: number; // default 1000
 	debug?: boolean; // default false
 }
@@ -25,7 +25,7 @@ interface RobloxCacheConfig {
 
 ## Configs usage
 ```ts
-new RobloxCache({
+new SimpleCache({
 	maxSize?: number;
 	debug?: boolean;
 })
@@ -34,9 +34,9 @@ new RobloxCache({
 ## Basic usage
 
 ```ts
-import RobloxCache from "roblox-cache";
+import SimpleCache from "simple-cache";
 
-const cache = new RobloxCache({ maxSize: 500, debug: false });
+const cache = new SimpleCache({ maxSize: 500, debug: false });
 
 cache.set("score:blue", 1);
 cache.set("score:red", 2);
@@ -66,7 +66,7 @@ it returns the cached value and does **not** run the function again.
 ```ts
 type Profile = { level: number };
 
-const profiles = new RobloxCache<Profile>({ maxSize: 200 });
+const profiles = new SimpleCache<Profile>({ maxSize: 200 });
 
 const profile = await profiles.remember(
 	"profile:123",
@@ -81,7 +81,7 @@ const profile = await profiles.remember(
 ## API
 
 ```ts
-new RobloxCache<T>(config?: { maxSize?: number; debug?: boolean })
+new SimpleCache<T>(config?: { maxSize?: number; debug?: boolean })
 
 set(key: string, value: T, ttl?: number): void
 
