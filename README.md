@@ -10,7 +10,7 @@ Use it to avoid repeating expensive work (computations, HTTP calls, DataStore re
 ## Install
 
 ```bash
-npm i @constcrypt/simple-cache
+npm i simple-cache
 ```
 
 ## Configs
@@ -34,7 +34,7 @@ new SimpleCache({
 ## Basic usage
 
 ```ts
-import SimpleCache from "@constcrypt/simple-cache";
+import SimpleCache from "simple-cache";
 
 const cache = new SimpleCache({ maxSize: 500, debug: false });
 
